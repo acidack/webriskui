@@ -2,7 +2,8 @@
 
 A simple Flask web application for interacting with the Google Cloud Web Risk API. This UI allows you to scan URLs against Google's threat lists, submit potentially malicious URLs for analysis, and check the status of your submissions.
 
-![Web Risk UI Screenshot](https://i.imgur.com/8QG9Vih.png)
+![Web Risk UI Screenshot](/screen2.png)
+![Web Risk UI Screenshot](/screen1.png)
 
 ## Features
 
