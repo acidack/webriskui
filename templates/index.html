@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Web Risk UI App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card, .tab-content { margin-bottom: 1.5rem; }
+        .card-header h2, .card-header h3 { margin-bottom: 0; font-size: 1.25rem; }
+        pre { background-color: #e9ecef; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; font-size: 0.9em; max-height: 400px; overflow-y: auto; }
+        .settings-card { border: 2px solid #0d6efd; }
+        .nav-tabs .nav-link.active { color: #000; font-weight: 500; }
+        .tab-content { background-color: #fff; border: 1px solid #dee2e6; border-top: 0; padding: 1.5rem; border-radius: 0 0 0.375rem 0.375rem; }
+        .scan-result-card { border: 1px solid #dee2e6; border-radius: .375rem; margin-bottom: 1rem; }
+        .scan-result-header { padding: 0.75rem 1rem; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; }
+        .scan-result-body { padding: 1rem; }
+        .scan-result-body h6 { font-weight: bold; }
+        .eval-tag { display: inline-block; padding: .35em .65em; font-size: .75em; font-weight: 700; line-height: 1; color: #fff; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .25rem; margin-right: 0.5rem; min-width: 190px; }
+        .eval-tag-safe { background-color: #198754; }
+        .eval-tag-high { background-color: #dc3545; }
+        .eval-tag-medium { background-color: #fd7e14; }
+        .eval-tag-low { background-color: #ffc107; color: #000 !important; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4 mb-5">
+        <div class="d-flex align-items-center mb-3">
+             <i class="bi bi-shield-check me-3" style="font-size: 2.5rem; color: #0d6efd;"></i>
+             <h1 class="mb-0">Sample Web Risk UI App</h1>
+        </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ 'danger' if category == 'error' else ('warning' if category == 'warning' else 'info') }} alert-dismissible fade show" role="alert">{{ message | safe }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endfor %}{% endif %}
+        {% endwith %}
+        <div class="card shadow-sm settings-card">
+            <div class="card-header"><h2 class="d-flex justify-content-between align-items-center"><span>⚙️ Settings (Saved in Browser)</span><button type="button" id="save-settings-btn" class="btn btn-success btn-sm">Save</button></h2></div>
+            <div class="card-body"><div class="row"><div class="col-md-6 mb-3 mb-md-0"><label for="user_project_id_input" class="form-label">Your GCP Project ID:</label><input type="text" class="form-control" id="user_project_id_input" placeholder="e.g., my-gcp-project-123"><div class="form-text">Required for Submit URI & Check Status.</div></div><div class="col-md-6"><label for="user_api_key_input" class="form-label">Web Risk API Key:</label><input type="password" class="form-control" id="user_api_key_input" placeholder="Paste your Web Risk API Key here"><div class="form-text">Required for Scan URLs. <a href="https://cloud.google.com/docs/authentication/api-keys" target="_blank" rel="noopener noreferrer">(How to create?)</a></div></div></div><div id="settings-status" class="mt-2 small"></div></div>
+        </div>
+
+        <ul class="nav nav-tabs mt-4" id="main-tabs" role="tablist">
+            <li class="nav-item" role="presentation"><button class="nav-link {% if active_tab == 'scan' %}active{% endif %}" id="scan-tab" data-bs-toggle="tab" data-bs-target="#scan-tab-pane" type="button"><i class="bi bi-search me-2"></i>Scan URLs</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link {% if active_tab == 'submit' %}active{% endif %}" id="submit-tab" data-bs-toggle="tab" data-bs-target="#submit-tab-pane" type="button"><i class="bi bi-send me-2"></i>Submit URLs</button></li>
+        </ul>
+
+        <div class="tab-content" id="main-tabs-content">
+            <div class="tab-pane fade {% if active_tab == 'scan' %}show active{% endif %}" id="scan-tab-pane" role="tabpanel">
+                <form id="evaluate-form" action="{{ url_for('handle_evaluate') }}" method="POST"><input type="hidden" id="user_api_key_evaluate" name="user_api_key"><div class="input-group mb-3"><input type="url" class="form-control form-control-lg" name="uri_evaluate" required placeholder="Enter URL to scan..."><button type="submit" class="btn btn-primary" id="evaluate-btn"><i class="bi bi-shield-check"></i> Scan URL</button></div></form>
+                {% if scan_history %}<hr class="my-4">{% for result in scan_history %}<div class="scan-result-card"><div class="scan-result-header d-flex justify-content-between align-items-center"><div><strong class="text-break">{{ result.uri }}</strong><div class="text-muted small">Scanned at: {{ result.scanned_at }}</div></div><i class="bi {% if result.high_risk_detected %}bi-exclamation-triangle-fill text-danger{% else %}bi-check-circle-fill text-success{% endif %}" style="font-size: 1.5rem;"></i></div><div class="scan-result-body"><h6>Original URL Evaluation:</h6>{% for eval in result.evaluations %}<div class="mb-2"><span class="eval-tag eval-tag-{{ eval.display_class }}">{{ eval.type.replace('_', ' ').title() }}: <strong>{{ eval.confidence }}</strong></span></div>{% endfor %}{% if result.high_risk_detected %}<div class="alert alert-danger mt-3 d-flex align-items-center"><i class="bi bi-exclamation-triangle-fill me-2"></i><div><strong>High risk detected!</strong> Consider submitting this URL to Web Risk.<a href="#" class="alert-link ms-2" onclick="document.getElementById('uri_submit').value='{{ result.uri }}'; document.getElementById('submit-tab').click(); return false;">Submit URL</a></div></div>{% endif %}<div class="mt-3"><a class="small text-muted" data-bs-toggle="collapse" href="#json-{{ loop.index }}" role="button"><i class="bi bi-braces"></i> Show/Hide Raw JSON</a><div class="collapse mt-2" id="json-{{ loop.index }}"><pre><code>{{ result.raw_json }}</code></pre></div></div></div></div>{% endfor %}{% endif %}
+            </div>
+            
+            <div class="tab-pane fade {% if active_tab == 'submit' %}show active{% endif %}" id="submit-tab-pane" role="tabpanel">
+                 <form id="submission-form" action="{{ url_for('handle_submission') }}" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" id="user_project_id_submit" name="user_project_id">
+                    
+                    {% if not session.get('cached_sa_key') %}
+                    <div class="mb-3">
+                        <label for="user_sa_key_file_submit_input" class="form-label">Service Account Key File: <span class="text-danger">*</span></label>
+                        <input class="form-control" type="file" id="user_sa_key_file_submit_input" name="user_sa_key_file_submit" accept=".json" required>
+                        <div class="form-text">A Service Account Key file is required to make submissions.</div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info d-flex justify-content-between align-items-center p-2 mb-3">
+                        <span><i class="bi bi-info-circle-fill me-2"></i>Using cached key: <strong>{{ session['cached_sa_key'].get('client_email', 'Unknown') }}</strong></span>
+                        <a href="{{ url_for('clear_cached_key') }}" class="btn btn-sm btn-outline-primary py-0">Use different key</a>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3"><label for="uri_submit" class="form-label">URI to Submit: <span class="text-danger">*</span></label><input type="url" class="form-control" id="uri_submit" name="uri_submit" required></div>
+                    <fieldset class="mb-3 border p-3 rounded"><legend class="w-auto px-2">Submission Threat Types <span class="text-danger">*</span></legend>{% for type in threat_types %}{% if 'UNSPECIFIED' not in type %}<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="submission_threat_type" value="{{ type }}" id="sub-{{type}}"><label class="form-check-label" for="sub-{{type}}">{{ type.replace('_', ' ').title() }}</label></div>{% endif %}{% endfor %}</fieldset>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-send-check"></i> Submit to Web Risk API</button>
+                </form>
+
+                {% if last_action and last_action != 'evaluate' %}<div class="card shadow-sm my-4" id="response-area"><div class="card-header"><h3><i class="bi bi-file-code me-2"></i>API Response ({{ last_action.replace('_', ' ').title() }})</h3></div><div class="card-body">{% if api_status %}<p class="mb-2">Status Code: <span class="badge bg-{{'success' if api_status < 300 else 'danger'}}">{{ api_status }}</span></p>{% endif %}{% if error_message %}<p class="text-danger mb-2"><b>Error Details:</b> {{ error_message | safe }}</p>{% endif %}{% if api_response %}<h5 class="mt-2">Response Body:</h5><pre><code>{{ api_response }}</code></pre>{% elif not error_message %}<p class="text-muted">No response body received.</p>{% endif %}</div></div>{% endif %}
+                
+                <hr class="my-4">
+
+                <div>
+                    <h3><i class="bi bi-stopwatch me-2"></i>Check Submission Status</h3>
+                    <form id="check-status-form" action="{{ url_for('handle_check_status') }}" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" id="user_project_id_check" name="user_project_id">
+                        
+                        {% if not session.get('cached_sa_key') %}
+                        <div class="mb-3">
+                            <label for="user_sa_key_file_check_input" class="form-label">Service Account Key File: <span class="text-danger">*</span></label>
+                            <input class="form-control" type="file" id="user_sa_key_file_check_input" name="user_sa_key_file_check" accept=".json" required>
+                            <div class="form-text">Required for status check.</div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info d-flex justify-content-between align-items-center p-2 mb-3">
+                             <span><i class="bi bi-info-circle-fill me-2"></i>Using cached key: <strong>{{ session['cached_sa_key'].get('client_email', 'Unknown') }}</strong></span>
+                             <a href="{{ url_for('clear_cached_key') }}" class="btn btn-sm btn-outline-primary py-0">Use different key</a>
+                        </div>
+                        {% endif %}
+
+                        {% if submissions %}<div class="mb-3"><label for="submission_history" class="form-label">Load Previous Submission:</label><select class="form-select" id="submission_history"><option value="">-- Select a past submission --</option>{% for sub in submissions %}<option value="{{ sub.operation_name }}">{{ sub.submitted_at }} - {{ sub.submitted_uri[:80] }}</option>{% endfor %}</select></div>{% endif %}
+                        <div class="mb-3"><label for="operation_id" class="form-label">Operation ID: <span class="text-danger">*</span></label><input type="text" class="form-control" id="operation_id" name="operation_id" required value="{{ operation_id_checked or operation_name or '' }}"></div>
+                        <button type="submit" class="btn btn-secondary"><i class="bi bi-check2-circle"></i> Check Status</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const projectIdInput = document.getElementById('user_project_id_input');
+            const apiKeyInput = document.getElementById('user_api_key_input');
+            const saveButton = document.getElementById('save-settings-btn');
+            const settingsStatus = document.getElementById('settings-status');
+            const loadSettings = () => {
+                projectIdInput.value = localStorage.getItem('webRiskUserProjectId') || '';
+                apiKeyInput.value = localStorage.getItem('webRiskUserApiKey') || '';
+                updateHiddenFields();
+            };
+            const saveSettings = () => {
+                localStorage.setItem('webRiskUserProjectId', projectIdInput.value.trim());
+                localStorage.setItem('webRiskUserApiKey', apiKeyInput.value.trim());
+                settingsStatus.textContent = 'Settings saved!';
+                settingsStatus.className = 'mt-2 small text-success';
+                setTimeout(() => { settingsStatus.textContent = ''; }, 3000);
+                updateHiddenFields();
+            };
+            const updateHiddenFields = () => {
+                const projectId = projectIdInput.value.trim();
+                const apiKey = apiKeyInput.value.trim();
+                document.getElementById('user_project_id_submit').value = projectId;
+                document.getElementById('user_project_id_check').value = projectId;
+                document.getElementById('user_api_key_evaluate').value = apiKey;
+            };
+            saveButton.addEventListener('click', saveSettings);
+            const historySelect = document.getElementById('submission_history');
+            if (historySelect) {
+                historySelect.addEventListener('change', function() {
+                    document.getElementById('operation_id').value = this.value || '';
+                });
+            }
+            loadSettings();
+        });
+    </script>
+</body>
+</html>
