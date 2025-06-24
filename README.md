@@ -12,20 +12,6 @@ A simple Flask web application for interacting with the Google Cloud Web Risk AP
 * **Submission History:** See a list of your past submissions (Note: history is ephemeral on Cloud Run).
 * **Credential Caching:** Temporarily caches your Service Account Key within your browser session for convenience.
 
-## Project Structure
-
-For the application to run correctly, the project must have the following structure:
-
-/webriskui
-|
-|-- app.py
-|-- Dockerfile
-|-- requirements.txt
-|-- templates/
-|   |-- index.html
-|
-|-- .gcloudignore  (Optional)
-
 
 ---
 
