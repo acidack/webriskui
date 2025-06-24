@@ -12,28 +12,6 @@ A simple Flask web application for interacting with the Google Cloud Web Risk AP
 * **Submission History:** See a list of your past submissions (Note: history is ephemeral on Cloud Run).
 * **Credential Caching:** Temporarily caches your Service Account Key within your browser session for convenience.
 
-Of course. That's an excellent improvement to make the instructions more flexible for users in different parts of the world.
-
-I have updated the "Deploying to Google Cloud Run" section of the README.md to include instructions for choosing a region and have simplified the commands to use variables. This will make the process easier and less error-prone.
-
-Here is the complete, updated README.md file.
-
-Markdown
-
-# Web Risk UI
-
-A simple Flask web application for interacting with the Google Cloud Web Risk API. This UI allows you to scan URLs against Google's threat lists, submit potentially malicious URLs for analysis, and check the status of your submissions.
-
-![Web Risk UI Screenshot](https://i.imgur.com/8QG9Vih.png)
-
-## Features
-
-* **Scan URLs:** Quickly evaluate a URL against Google's threat lists using the Evaluate API.
-* **Submit URLs:** Report potentially malicious URLs to Google using a Service Account.
-* **Check Status:** Check the status of a previous submission using its operation ID.
-* **Submission History:** See a list of your past submissions (Note: history is ephemeral on Cloud Run).
-* **Credential Caching:** Temporarily caches your Service Account Key within your browser session for convenience.
-
 ## Project Structure
 
 For the application to run correctly, the project must have the following structure:
