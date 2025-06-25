@@ -69,20 +69,28 @@ Follow these steps to run the application on your local machine for development 
 
 ## Option 2: Deploying to Google Cloud Run
 
-Follow these steps to deploy the application as a serverless container on Google Cloud.
+Follow these steps to deploy the application as a serverless container on Google Cloud. The easiest way to do this is by using the **Google Cloud Shell**, which is a browser-based terminal that comes pre-installed with all the necessary tools.
 
 ### Prerequisites
 
 * A Google Cloud Platform (GCP) project with billing enabled.
-* The `gcloud` command-line interface installed and authenticated (`gcloud auth login`).
 
 ### Instructions
 
-1.  **Open Your Terminal:**
-    Navigate to the root directory of the project (`webriskui`).
+1.  **Open Google Cloud Shell:**
+    In your [Google Cloud Console](https://console.cloud.google.com/), click the **Activate Cloud Shell** button in the top-right corner of the header. This will open a terminal session directly in your browser.
 
-2.  **Configure Your Deployment Settings:**
-    Run the following commands in your terminal, replacing the placeholder values. This will set variables to make the next steps easier.
+    ![Activate Cloud Shell Icon](https://cloud.google.com/shell/docs/images/shell_icon.png)
+
+2.  **Clone the Repository into Cloud Shell:**
+    Run the following command in the Cloud Shell terminal to download the application code.
+    ```bash
+    git clone [https://github.com/acidack/webriskui.git](https://github.com/acidack/webriskui.git)
+    cd webriskui
+    ```
+
+3.  **Configure Your Deployment Settings:**
+    Run the following commands in Cloud Shell, replacing the placeholder values. This will set your project and a chosen region for the deployment.
 
     ```bash
     # Replace "your-gcp-project-id" with your actual GCP Project ID
@@ -94,13 +102,13 @@ Follow these steps to deploy the application as a serverless container on Google
     REGION="australia-southeast1"
     ```
 
-3.  **Enable Required APIs:**
+4.  **Enable Required APIs:**
     This one-time command enables the services for building, storing, and running your container.
     ```bash
     gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
     ```
 
-4.  **Create an Artifact Registry Repository:**
+5.  **Create an Artifact Registry Repository:**
     This is a private registry to store your application's container image. It will be created in the region you set above.
     ```bash
     gcloud artifacts repositories create webrisk-app-repo \
@@ -110,13 +118,13 @@ Follow these steps to deploy the application as a serverless container on Google
     ```
     *(Note: If you get an error that the repository already exists, you can safely ignore it and move to the next step.)*
 
-5.  **Build the Container Image with Cloud Build:**
+6.  **Build the Container Image with Cloud Build:**
     This command reads your `Dockerfile`, builds the image, and pushes it to the repository you just created. It automatically uses the Project ID and Region you configured.
     ```bash
     gcloud builds submit --tag ${REGION}-docker.pkg.dev/$(gcloud config get-value project)/webrisk-app-repo/webrisk-app:latest
     ```
 
-6.  **Deploy to Cloud Run:**
+7.  **Deploy to Cloud Run:**
     This command creates the serverless service from your container image in your chosen region. The `--allow-unauthenticated` flag makes it a public service.
     ```bash
     gcloud run deploy webrisk-app-service \
@@ -126,7 +134,7 @@ Follow these steps to deploy the application as a serverless container on Google
       --allow-unauthenticated
     ```
 
-7.  **Access Your Deployed App:**
+8.  **Access Your Deployed App:**
     After the deployment is successful, the command will output a **Service URL**. You can use this URL to access your application from anywhere.
 
 ---
@@ -134,7 +142,7 @@ Follow these steps to deploy the application as a serverless container on Google
 ## Using the Application
 
 1.  **Settings:** Paste your **GCP Project ID** and a **Web Risk API Key** into the settings panel at the top and click Save.
-2.  **Scan URLs:** Enter a URL and click "Scan URL". This uses the API Key.
+2.  **Scan URLs:** Enter a URL and click "Look Up URL" or "Evaluate URL". This uses the API Key.
 3.  **Submit URLs:** To submit a URL or check a submission status, you must provide a **Service Account Key file**. The first time you upload a file, it will be cached for your browser session for convenience.
 
 ### Important Notes
