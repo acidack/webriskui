@@ -12,12 +12,13 @@
         .card-header h2, .card-header h3 { margin-bottom: 0; font-size: 1.25rem; }
         pre { background-color: #e9ecef; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; font-size: 0.9em; max-height: 400px; overflow-y: auto; }
         .settings-card { border: 2px solid #0d6efd; }
+        .nav-tabs .nav-link { color: #6c757d; }
         .nav-tabs .nav-link.active { color: #000; font-weight: 500; }
         .tab-content { background-color: #fff; border: 1px solid #dee2e6; border-top: 0; padding: 1.5rem; border-radius: 0 0 0.375rem 0.375rem; }
-        .scan-result-card { border: 1px solid #dee2e6; border-radius: .375rem; margin-bottom: 1rem; }
-        .scan-result-header { padding: 0.75rem 1rem; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; }
-        .scan-result-body { padding: 1rem; }
-        .scan-result-body h6 { font-weight: bold; }
+        .result-card { border: 1px solid #dee2e6; border-radius: .375rem; margin-bottom: 1rem; }
+        .result-header { padding: 0.75rem 1rem; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; }
+        .result-body { padding: 1rem; }
+        .result-body h6 { font-weight: bold; }
         .eval-tag { display: inline-block; padding: .35em .65em; font-size: .75em; font-weight: 700; line-height: 1; color: #fff; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .25rem; margin-right: 0.5rem; min-width: 190px; }
         .eval-tag-safe { background-color: #198754; }
         .eval-tag-high { background-color: #dc3545; }
@@ -31,12 +32,35 @@
              <i class="bi bi-shield-check me-3" style="font-size: 2.5rem; color: #0d6efd;"></i>
              <h1 class="mb-0">Sample Web Risk UI App</h1>
         </div>
+
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ 'danger' if category == 'error' else ('warning' if category == 'warning' else 'info') }} alert-dismissible fade show" role="alert">{{ message | safe }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endfor %}{% endif %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else ('warning' if category == 'warning' else 'info') }} alert-dismissible fade show" role="alert">
+                        {{ message | safe }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
         {% endwith %}
+        
         <div class="card shadow-sm settings-card">
             <div class="card-header"><h2 class="d-flex justify-content-between align-items-center"><span>⚙️ Settings (Saved in Browser)</span><button type="button" id="save-settings-btn" class="btn btn-success btn-sm">Save</button></h2></div>
-            <div class="card-body"><div class="row"><div class="col-md-6 mb-3 mb-md-0"><label for="user_project_id_input" class="form-label">Your GCP Project ID:</label><input type="text" class="form-control" id="user_project_id_input" placeholder="e.g., my-gcp-project-123"><div class="form-text">Required for Submit URI & Check Status.</div></div><div class="col-md-6"><label for="user_api_key_input" class="form-label">Web Risk API Key:</label><input type="password" class="form-control" id="user_api_key_input" placeholder="Paste your Web Risk API Key here"><div class="form-text">Required for Scan URLs. <a href="https://cloud.google.com/docs/authentication/api-keys" target="_blank" rel="noopener noreferrer">(How to create?)</a></div></div></div><div id="settings-status" class="mt-2 small"></div></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label for="user_project_id_input" class="form-label">Your GCP Project ID:</label>
+                        <input type="text" class="form-control" id="user_project_id_input" placeholder="e.g., my-gcp-project-123">
+                        <div class="form-text">Required for Submit URI & Check Status.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="user_api_key_input" class="form-label">Web Risk API Key:</label>
+                        <input type="password" class="form-control" id="user_api_key_input" placeholder="Paste your Web Risk API Key here">
+                        <div class="form-text">Required for Scan URLs. <a href="https://cloud.google.com/docs/authentication/api-keys" target="_blank" rel="noopener noreferrer">(How to create?)</a></div>
+                    </div>
+                </div>
+                <div id="settings-status" class="mt-2 small"></div>
+            </div>
         </div>
 
         <ul class="nav nav-tabs mt-4" id="main-tabs" role="tablist">
@@ -46,14 +70,56 @@
 
         <div class="tab-content" id="main-tabs-content">
             <div class="tab-pane fade {% if active_tab == 'scan' %}show active{% endif %}" id="scan-tab-pane" role="tabpanel">
-                <form id="evaluate-form" action="{{ url_for('handle_evaluate') }}" method="POST"><input type="hidden" id="user_api_key_evaluate" name="user_api_key"><div class="input-group mb-3"><input type="url" class="form-control form-control-lg" name="uri_evaluate" required placeholder="Enter URL to scan..."><button type="submit" class="btn btn-primary" id="evaluate-btn"><i class="bi bi-shield-check"></i> Scan URL</button></div></form>
-                {% if scan_history %}<hr class="my-4">{% for result in scan_history %}<div class="scan-result-card"><div class="scan-result-header d-flex justify-content-between align-items-center"><div><strong class="text-break">{{ result.uri }}</strong><div class="text-muted small">Scanned at: {{ result.scanned_at }}</div></div><i class="bi {% if result.high_risk_detected %}bi-exclamation-triangle-fill text-danger{% else %}bi-check-circle-fill text-success{% endif %}" style="font-size: 1.5rem;"></i></div><div class="scan-result-body"><h6>Original URL Evaluation:</h6>{% for eval in result.evaluations %}<div class="mb-2"><span class="eval-tag eval-tag-{{ eval.display_class }}">{{ eval.type.replace('_', ' ').title() }}: <strong>{{ eval.confidence }}</strong></span></div>{% endfor %}{% if result.high_risk_detected %}<div class="alert alert-danger mt-3 d-flex align-items-center"><i class="bi bi-exclamation-triangle-fill me-2"></i><div><strong>High risk detected!</strong> Consider submitting this URL to Web Risk.<a href="#" class="alert-link ms-2" onclick="document.getElementById('uri_submit').value='{{ result.uri }}'; document.getElementById('submit-tab').click(); return false;">Submit URL</a></div></div>{% endif %}<div class="mt-3"><a class="small text-muted" data-bs-toggle="collapse" href="#json-{{ loop.index }}" role="button"><i class="bi bi-braces"></i> Show/Hide Raw JSON</a><div class="collapse mt-2" id="json-{{ loop.index }}"><pre><code>{{ result.raw_json }}</code></pre></div></div></div></div>{% endfor %}{% endif %}
+                
+                <h3 class="mb-3">Lookup API</h3>
+                <p class="text-muted small">Quickly checks if a URL hash prefix matches Google's blocklists. This is very fast and efficient.</p>
+                <form id="lookup-form" action="{{ url_for('handle_lookup') }}" method="POST">
+                    <input type="hidden" id="user_api_key_lookup" name="user_api_key">
+                    <div class="input-group mb-3">
+                        <input type="url" class="form-control form-control-lg" name="uri_lookup" required placeholder="Enter URL to look up...">
+                        <button type="submit" class="btn btn-info text-white"><i class="bi bi-binoculars-fill"></i> Look Up URL</button>
+                    </div>
+                </form>
+                {% if lookup_history %}
+                    {% for result in lookup_history %}
+                    <div class="result-card">
+                        <div class="result-header d-flex justify-content-between align-items-center">
+                            <div><strong class="text-break">{{ result.uri }}</strong><div class="text-muted small">Looked up at: {{ result.scanned_at }}</div></div>
+                            <i class="bi {% if result.threat_found %}bi-shield-exclamation text-danger{% else %}bi-shield-check text-success{% endif %}" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <div class="result-body">
+                            {% if result.threat_found %}
+                                <div class="alert alert-warning"><strong>Threat Found!</strong> Matched threat types: {{ result.threat_info.threatTypes | join(', ') }}</div>
+                            {% else %}
+                                <div class="alert alert-success"><strong>No Threat Found</strong> for checked threat types.</div>
+                            {% endif %}
+                            <div class="mt-3"><a class="small text-muted" data-bs-toggle="collapse" href="#json-lookup-{{ loop.index }}"><i class="bi bi-braces"></i> Show/Hide Raw JSON</a><div class="collapse mt-2" id="json-lookup-{{ loop.index }}"><pre><code>{{ result.raw_json }}</code></pre></div></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <hr class="my-5">
+
+                <h3 class="mb-3">Evaluate API</h3>
+                <p class="text-muted small">Performs a more detailed, real-time evaluation of a URL's potential risk using advanced analysis.</p>
+                <form id="evaluate-form" action="{{ url_for('handle_evaluate') }}" method="POST">
+                    <input type="hidden" id="user_api_key_evaluate" name="user_api_key">
+                    <div class="input-group mb-3"><input type="url" class="form-control form-control-lg" name="uri_evaluate" required placeholder="Enter URL to evaluate..."><button type="submit" class="btn btn-primary"><i class="bi bi-shield-check"></i> Evaluate URL</button></div>
+                </form>
+                {% if scan_history %}
+                    {% for result in scan_history %}
+                    <div class="result-card">
+                        <div class="result-header d-flex justify-content-between align-items-center"><div><strong class="text-break">{{ result.uri }}</strong><div class="text-muted small">Evaluated at: {{ result.scanned_at }}</div></div><i class="bi {% if result.high_risk_detected %}bi-exclamation-triangle-fill text-danger{% else %}bi-check-circle-fill text-success{% endif %}" style="font-size: 1.5rem;"></i></div>
+                        <div class="result-body"><h6>Original URL Evaluation:</h6>{% for eval in result.evaluations %}<div class="mb-2"><span class="eval-tag eval-tag-{{ eval.display_class }}">{{ eval.type.replace('_', ' ').title() }}: <strong>{{ eval.confidence }}</strong></span></div>{% endfor %}{% if result.high_risk_detected %}<div class="alert alert-danger mt-3 d-flex align-items-center"><i class="bi bi-exclamation-triangle-fill me-2"></i><div><strong>High risk detected!</strong> Consider submitting this URL to Web Risk.<a href="#" class="alert-link ms-2" onclick="document.getElementById('uri_submit').value='{{ result.uri }}'; document.getElementById('submit-tab').click(); return false;">Submit URL</a></div></div>{% endif %}<div class="mt-3"><a class="small text-muted" data-bs-toggle="collapse" href="#json-eval-{{ loop.index }}"><i class="bi bi-braces"></i> Show/Hide Raw JSON</a><div class="collapse mt-2" id="json-eval-{{ loop.index }}"><pre><code>{{ result.raw_json }}</code></pre></div></div></div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
             </div>
             
             <div class="tab-pane fade {% if active_tab == 'submit' %}show active{% endif %}" id="submit-tab-pane" role="tabpanel">
                  <form id="submission-form" action="{{ url_for('handle_submission') }}" method="POST" enctype="multipart/form-data">
                     <input type="hidden" id="user_project_id_submit" name="user_project_id">
-                    
                     {% if not session.get('cached_sa_key') %}
                     <div class="mb-3">
                         <label for="user_sa_key_file_submit_input" class="form-label">Service Account Key File: <span class="text-danger">*</span></label>
@@ -66,13 +132,21 @@
                         <a href="{{ url_for('clear_cached_key') }}" class="btn btn-sm btn-outline-primary py-0">Use different key</a>
                     </div>
                     {% endif %}
-
                     <div class="mb-3"><label for="uri_submit" class="form-label">URI to Submit: <span class="text-danger">*</span></label><input type="url" class="form-control" id="uri_submit" name="uri_submit" required></div>
-                    <fieldset class="mb-3 border p-3 rounded"><legend class="w-auto px-2">Submission Threat Types <span class="text-danger">*</span></legend>{% for type in threat_types %}{% if 'UNSPECIFIED' not in type %}<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="submission_threat_type" value="{{ type }}" id="sub-{{type}}"><label class="form-check-label" for="sub-{{type}}">{{ type.replace('_', ' ').title() }}</label></div>{% endif %}{% endfor %}</fieldset>
+                    <fieldset class="mb-3 border p-3 rounded"><legend class="w-auto px-2">Submission Threat Types <span class="text-danger">*</span></legend>{% for type in submission_threat_types %}{% if 'UNSPECIFIED' not in type %}<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="submission_threat_type" value="{{ type }}" id="sub-{{type}}"><label class="form-check-label" for="sub-{{type}}">{{ type.replace('_', ' ').title() }}</label></div>{% endif %}{% endfor %}</fieldset>
                     <button type="submit" class="btn btn-primary"><i class="bi bi-send-check"></i> Submit to Web Risk API</button>
                 </form>
 
-                {% if last_action and last_action != 'evaluate' %}<div class="card shadow-sm my-4" id="response-area"><div class="card-header"><h3><i class="bi bi-file-code me-2"></i>API Response ({{ last_action.replace('_', ' ').title() }})</h3></div><div class="card-body">{% if api_status %}<p class="mb-2">Status Code: <span class="badge bg-{{'success' if api_status < 300 else 'danger'}}">{{ api_status }}</span></p>{% endif %}{% if error_message %}<p class="text-danger mb-2"><b>Error Details:</b> {{ error_message | safe }}</p>{% endif %}{% if api_response %}<h5 class="mt-2">Response Body:</h5><pre><code>{{ api_response }}</code></pre>{% elif not error_message %}<p class="text-muted">No response body received.</p>{% endif %}</div></div>{% endif %}
+                {% if last_action == 'submit' or last_action == 'check_status' %}
+                <div class="card shadow-sm my-4" id="response-area">
+                     <div class="card-header"><h3><i class="bi bi-file-code me-2"></i>API Response ({{ last_action.replace('_', ' ').title() }})</h3></div>
+                      <div class="card-body">
+                         {% if api_status %}<p class="mb-2">Status Code: <span class="badge bg-{{'success' if api_status < 300 else 'danger'}}">{{ api_status }}</span></p>{% endif %}
+                         {% if error_message %}<p class="text-danger mb-2"><b>Error Details:</b> {{ error_message | safe }}</p>{% endif %}
+                         {% if api_response %}<h5 class="mt-2">Response Body:</h5><pre><code>{{ api_response }}</code></pre>{% elif not error_message %}<p class="text-muted">No response body received.</p>{% endif %}
+                     </div>
+                </div>
+                {% endif %}
                 
                 <hr class="my-4">
 
@@ -80,7 +154,6 @@
                     <h3><i class="bi bi-stopwatch me-2"></i>Check Submission Status</h3>
                     <form id="check-status-form" action="{{ url_for('handle_check_status') }}" method="POST" enctype="multipart/form-data">
                         <input type="hidden" id="user_project_id_check" name="user_project_id">
-                        
                         {% if not session.get('cached_sa_key') %}
                         <div class="mb-3">
                             <label for="user_sa_key_file_check_input" class="form-label">Service Account Key File: <span class="text-danger">*</span></label>
@@ -93,7 +166,6 @@
                              <a href="{{ url_for('clear_cached_key') }}" class="btn btn-sm btn-outline-primary py-0">Use different key</a>
                         </div>
                         {% endif %}
-
                         {% if submissions %}<div class="mb-3"><label for="submission_history" class="form-label">Load Previous Submission:</label><select class="form-select" id="submission_history"><option value="">-- Select a past submission --</option>{% for sub in submissions %}<option value="{{ sub.operation_name }}">{{ sub.submitted_at }} - {{ sub.submitted_uri[:80] }}</option>{% endfor %}</select></div>{% endif %}
                         <div class="mb-3"><label for="operation_id" class="form-label">Operation ID: <span class="text-danger">*</span></label><input type="text" class="form-control" id="operation_id" name="operation_id" required value="{{ operation_id_checked or operation_name or '' }}"></div>
                         <button type="submit" class="btn btn-secondary"><i class="bi bi-check2-circle"></i> Check Status</button>
@@ -128,6 +200,7 @@
                 const apiKey = apiKeyInput.value.trim();
                 document.getElementById('user_project_id_submit').value = projectId;
                 document.getElementById('user_project_id_check').value = projectId;
+                document.getElementById('user_api_key_lookup').value = apiKey;
                 document.getElementById('user_api_key_evaluate').value = apiKey;
             };
             saveButton.addEventListener('click', saveSettings);
