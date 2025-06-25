@@ -85,7 +85,7 @@ Follow these steps to deploy the application as a serverless container on Google
 2.  **Clone the Repository into Cloud Shell:**
     Run the following command in the Cloud Shell terminal to download the application code.
     ```bash
-    git clone [https://github.com/acidack/webriskui.git](https://github.com/acidack/webriskui.git)
+    git clone https://github.com/acidack/webriskui.git
     cd webriskui
     ```
 
