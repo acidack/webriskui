@@ -279,8 +279,8 @@ def handle_check_status():
             raise ValueError("A Service Account Key file is required.")
         credentials, _ = get_sa_credentials_from_info(key_info)
         authed_session = AuthorizedSession(credentials)
-        full_op_name = operation_id if '/' in operation_id else f"v1/projects/{user_project_id}/operations/{operation_id}"
-        check_url = f"{WEBRISK_API_ENDPOINT}/{full_op_name}"
+        full_op_name = operation_id if '/' in operation_id else f"projects/{user_project_id}/operations/{operation_id}"
+        check_url = f"{WEBRISK_API_ENDPOINT}/v1/{full_op_name}"
         response = authed_session.get(check_url, headers={'Content-Type': 'application/json'})
         api_response_text = response.text
         response.raise_for_status()
